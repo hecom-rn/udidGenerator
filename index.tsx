@@ -2,12 +2,12 @@ import {NativeModules} from 'react-native';
 
 const {RNUdidGenerator} = NativeModules;
 
-function testToast() {
-    RNUdidGenerator.testToast();
+async function getUdid(parentDir: string) {
+    return (await RNUdidGenerator.getUdid(parentDir)) as string;
 }
 
 const udidGenerator = {
-    testToast,
+    getUdid,
 };
 
 export default udidGenerator;
