@@ -2,8 +2,8 @@ import {NativeModules} from 'react-native';
 
 const {RNUdidGenerator} = NativeModules;
 
-async function getUdid(parentDir: string) {
-    return (await RNUdidGenerator.getUdid(parentDir)) as string;
+function getUdid(parentDir: string) {
+    return RNUdidGenerator.getUdid(parentDir) as Promise<string>;
 }
 
 const udidGenerator = {
