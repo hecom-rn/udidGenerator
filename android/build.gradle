@@ -35,5 +35,6 @@ repositories {
 dependencies {
     implementation 'com.facebook.react:react-native:+'
     implementation 'androidx.core:core:1.0.0'
+    implementation files('libs/oaid_sdk_1.0.23.aar')
 }
   

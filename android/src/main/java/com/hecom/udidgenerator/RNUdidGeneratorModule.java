@@ -6,11 +6,17 @@ import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.core.content.ContextCompat;
 
+import com.bun.miitmdid.core.MdidSdkHelper;
+import com.bun.miitmdid.interfaces.IIdentifierListener;
+import com.bun.miitmdid.interfaces.IdSupplier;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -26,15 +32,51 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class RNUdidGeneratorModule extends ReactContextBaseJavaModule {
     private static final String FILENAME = ".qwdsavas";
     private final ReactApplicationContext reactContext;
     private String udid;
+    private CountDownLatch oaidLatch = new CountDownLatch(1);
+    private volatile boolean manualDisabled;
+    private volatile boolean isOaidSupported;
 
     public RNUdidGeneratorModule(ReactApplicationContext reactContext) {
         super(reactContext);
         this.reactContext = reactContext;
+        //oaid默认支持到21
+        if (Build.VERSION.SDK_INT >= 21) {
+            MdidSdkHelper.InitSdk(reactContext, true, new IIdentifierListener() {
+
+                @Override
+                public void OnSupport(boolean b, IdSupplier idSupplier) {
+                    Log.d("RNUdidGeneratorModule", "OnSupport " + Thread.currentThread().getName());
+                    try {
+                        if (idSupplier == null) {
+                            return;
+                        }
+                        if (idSupplier.isSupported()) {
+                            isOaidSupported = true;
+                            String oaid = idSupplier.getOAID();
+                            Log.d("RNUdidGeneratorModule", "OnSupport oaid = " + oaid);
+                            boolean isValid = isOAIDValid(oaid);
+                            if (isValid) {
+                                udid = idSupplier.getOAID();
+                            } else {
+                                manualDisabled = isAllZero(oaid);
+                            }
+                        }
+                    } finally {
+                        oaidLatch.countDown();
+                    }
+                }
+            });
+        } else {
+            oaidLatch.countDown();
+        }
     }
 
     @Override
@@ -48,6 +90,22 @@ public class RNUdidGeneratorModule extends ReactContextBaseJavaModule {
 
             @Override
             protected String doInBackground(String... strings) {
+                try {
+                    oaidLatch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                if (isOaidSupported && manualDisabled) {
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(getReactApplicationContext(), "请允许隐私设置中的广告跟踪", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                    return null;
+                }
+
+
                 if (udid == null) {
                     udid = getUidByPath(reactContext, parentDir);
                 }
@@ -126,5 +184,35 @@ public class RNUdidGeneratorModule extends ReactContextBaseJavaModule {
         }
 
         return uid;
+    }
+
+    public static boolean isOAIDValid(String oaid) {
+        if (TextUtils.isEmpty(oaid)) {
+            return false;
+        }
+        if (isAllZero(oaid)) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * if user disabled the oaid,then something like 00000000-0000-0000-0000-000000000000 will be returned
+     *
+     * @param oaid
+     * @return
+     */
+    public static boolean isAllZero(String oaid) {
+        if (TextUtils.isEmpty(oaid)) {
+            return false;
+        }
+        String id = oaid.replaceAll("-", "");
+        for (int i = 0; i < id.length(); i++) {
+            char c = id.charAt(i);
+            if (c != '0') {
+                return false;
+            }
+        }
+        return true;
     }
 }
