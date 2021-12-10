@@ -91,16 +91,56 @@ public class RNUdidGeneratorModule extends ReactContextBaseJavaModule {
             File uidFile = new File(path);
             fileReader = new FileReader(uidFile);
             bufferedReader = new BufferedReader(fileReader);
-            String line = bufferedReader.readLine();
-            if (TextUtils.isEmpty(line)) {
+            String uidContent = bufferedReader.readLine();
+            String timeContent = bufferedReader.readLine();
+            long lastModified = uidFile.lastModified();
+            if (TextUtils.isEmpty(uidContent)) {
                 String generatorUid = UUID.randomUUID().toString();
                 fileWriter = new FileWriter(uidFile);
                 bufferedWriter = new BufferedWriter(fileWriter);
                 bufferedWriter.write(generatorUid);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                    bufferedWriter.write(System.lineSeparator());
+                }else {
+                    bufferedWriter.write("\n");
+                }
+                bufferedWriter.write(lastModified+"");
                 bufferedWriter.flush();
+                uidFile.setLastModified(lastModified);
                 uid = generatorUid;
             } else {
-                uid = line;
+                if(TextUtils.isEmpty(timeContent)){
+                    uid = uidContent;
+                    fileWriter = new FileWriter(uidFile,true);
+                    bufferedWriter = new BufferedWriter(fileWriter);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                        bufferedWriter.write(System.lineSeparator());
+                    }else {
+                        bufferedWriter.write("\n");
+                    }
+                    bufferedWriter.write(lastModified+"");
+                    bufferedWriter.flush();
+                    uidFile.setLastModified(lastModified);
+                }else {
+                    long time = Long.parseLong(timeContent);
+                    if(Math.abs(lastModified-time)<30000){
+                        uid = uidContent;
+                    }else {
+                        String generatorUid = UUID.randomUUID().toString();
+                        fileWriter = new FileWriter(uidFile);
+                        bufferedWriter = new BufferedWriter(fileWriter);
+                        bufferedWriter.write(generatorUid);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                            bufferedWriter.write(System.lineSeparator());
+                        }else {
+                            bufferedWriter.write("\n");
+                        }
+                        bufferedWriter.write(lastModified+"");
+                        bufferedWriter.flush();
+                        uidFile.setLastModified(lastModified);
+                        uid = generatorUid;
+                    }
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
