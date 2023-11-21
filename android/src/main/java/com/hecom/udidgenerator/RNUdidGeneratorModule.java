@@ -60,7 +60,12 @@ public class RNUdidGeneratorModule extends ReactContextBaseJavaModule {
     private String getPath(Context context, String parentDir) throws IOException {
 
         boolean isExternalUsable = Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState()) || !Environment.isExternalStorageRemovable();
-        boolean isExternalPermissionGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        boolean isExternalPermissionGranted;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            isExternalPermissionGranted = Environment.isExternalStorageManager();
+        } else {
+            isExternalPermissionGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        }
         if (isExternalUsable && isExternalPermissionGranted) {
             File path = new File(Environment.getExternalStorageDirectory() + File.separator + parentDir);
             if (!path.exists()) {
