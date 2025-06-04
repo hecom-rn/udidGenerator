@@ -9,6 +9,17 @@
   "keywords": [
     "react-native"
   ],
+  "harmony": {
+    "alias": "rtn-udid-generator",
+    "codegenConfig": [
+      {
+        "version": 2,
+        "specPaths": [
+          "./harmony/src/specs/v2"
+        ]
+      }
+    ]
+  },
   "author": "",
   "license": "",
   "peerDependencies": {
